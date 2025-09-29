@@ -1,37 +1,48 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import systemPrompt from "@/lib/systemPrompt";
+import { systemPrompt } from "@/lib/systemPrompts";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
-const CRISIS_REGEX = /(suicid|autoles|me\s*quiero\s*morir|hacerme\s*daño|no\s*quiero\s*vivir)/i;
+// Expresión regular para detectar crisis
+const CRISIS_REGEX = /(suicidar|matarme|quitarme la vida|no quiero vivir|no aguanto más)/i;
 
 export async function POST(req: Request) {
   try {
-    const { history }: { history: Array<{ role: "user" | "assistant"; content: string }> } = await req.json();
+    const { messages } = await req.json();
 
-    const lastUserMsg = [...history].reverse().find(m => m.role === "user")?.content ?? "";
-    if (CRISIS_REGEX.test(lastUserMsg)) {
-      const msg = "Siento que estés pasando por algo tan duro. No estás solo/a. Si estás en peligro o piensas hacerte daño, por favor busca ayuda inmediata: \uD83D\uDCDE 112 (emergencias) o 024 (salud mental 24h, España). Habla con alguien de confianza ahora mismo si puedes. Estoy aquí para acompañarte.";
-      return NextResponse.json({ content: msg });
+    // Buscar palabras de crisis
+    const ultimoMensaje = messages[messages.length - 1]?.content || "";
+    if (CRISIS_REGEX.test(ultimoMensaje)) {
+      return NextResponse.json({
+        role: "assistant",
+        content:
+          "Siento mucho lo que estás pasando 💙. No estás solo/a. Si estás en peligro o piensas hacerte daño, por favor busca ayuda inmediata: LLAMA al 112 (emergencias en España) o al 024 (teléfono contra el suicidio).",
+      });
     }
 
-    // Recorta historial para controlar coste
-    const trimmed = history.slice(-20);
-
-    const resp = await client.chat.completions.create({
+    // Llamar al modelo de OpenAI
+    const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
-      temperature: 0.6,
       messages: [
-        { role: "system", content: systemPrompt },
-        ...trimmed
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        ...messages,
       ],
-      max_tokens: 450
+      temperature: 0.7,
+      max_tokens: 500,
     });
 
-    const content = resp.choices[0]?.message?.content ?? "Ahora mismo no puedo responder. ¿Intentas de nuevo?";
-    return NextResponse.json({ content });
-  } catch (e) {
-    return NextResponse.json({ content: "Ha ocurrido un error. Inténtalo más tarde." }, { status: 500 });
+    return NextResponse.json(completion.choices[0].message);
+  } catch (error) {
+    console.error("Error en el endpoint:", error);
+    return NextResponse.json(
+      { error: "Error procesando la solicitud." },
+      { status: 500 }
+    );
   }
 }
