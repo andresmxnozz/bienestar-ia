@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import systemPrompt from "../../../biblioteca/systemPrompts"; // ← ruta relativa segura
+import systemPrompt from "../../../biblioteca/systemPrompts"; // ← ruta relativa, segura
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Detectar crisis (palabras sensibles)
 const CRISIS_REGEX = /(suicidar|matarme|quitarme la vida|no quiero vivir|no aguanto más)/i;
 
 export async function POST(req: Request) {
@@ -32,11 +31,13 @@ export async function POST(req: Request) {
       max_tokens: 500,
     });
 
-    const content = resp.choices?.[0]?.message?.content
-      ?? "Ahora mismo no puedo responder. ¿Puedes intentarlo otra vez?";
+    const content =
+      resp.choices?.[0]?.message?.content ||
+      "Ahora mismo no puedo responder. ¿Puedes intentarlo otra vez?";
 
     return NextResponse.json({ content });
   } catch (e) {
+    console.error("Error en route.ts:", e);
     return NextResponse.json(
       { error: "Error procesando la solicitud." },
       { status: 500 }
