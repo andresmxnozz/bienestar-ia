@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-// Import corregido → usamos biblioteca en vez de lib
-import systemPrompt from "@/biblioteca/systemPrompts";
+import systemPrompt from "@/biblioteca/systemPrompts"; // ← esta es la clave
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Detectar crisis (palabras sensibles)
 const CRISIS_REGEX = /(suicidar|matarme|quitarme la vida|no quiero vivir|no aguanto más)/i;
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { history } = await req.json();
 
-    const ultimoMensaje = messages?.[messages.length - 1]?.content || "";
+    const ultimoMensaje = history?.[history.length - 1]?.content || "";
     if (CRISIS_REGEX.test(ultimoMensaje)) {
       return NextResponse.json({
         role: "assistant",
@@ -22,19 +22,21 @@ export async function POST(req: Request) {
       });
     }
 
-    const completion = await client.chat.completions.create({
+    const openai = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        ...(messages || []),
+        ...(history || []),
       ],
       temperature: 0.7,
       max_tokens: 500,
     });
 
-    return NextResponse.json(completion.choices[0].message);
-  } catch (error) {
-    console.error("Error en el endpoint:", error);
+    const content =
+      openai.choices?.[0]?.message?.content ||
+      "Ahora mismo no puedo responder. ¿Puedes intentarlo otra vez?";
+    return NextResponse.json({ content });
+  } catch (e) {
     return NextResponse.json(
       { error: "Error procesando la solicitud." },
       { status: 500 }
