@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import systemPrompt from "@/biblioteca/systemPrompts";  // ojo: biblioteca, no lib
+// Usamos ruta relativa para evitar problemas con '@/'
+import systemPrompt from "../../../biblioteca/systemPrompts";  // ← ¡IMPORTANTE!
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    const ultimoMensaje = messages[messages.length - 1]?.content || "";
+    const ultimoMensaje = messages?.[messages.length - 1]?.content || "";
     if (CRISIS_REGEX.test(ultimoMensaje)) {
       return NextResponse.json({
         role: "assistant",
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        ...messages,
+        ...(messages || []),
       ],
       temperature: 0.7,
       max_tokens: 500,
