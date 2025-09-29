@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-// Usamos ruta relativa para evitar problemas con '@/'
-import systemPrompt from "../../../biblioteca/systemPrompts";  // ← ¡IMPORTANTE!
+// Import corregido → usamos biblioteca en vez de lib
+import systemPrompt from "@/biblioteca/systemPrompts";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Detectar crisis (palabras sensibles)
 const CRISIS_REGEX = /(suicidar|matarme|quitarme la vida|no quiero vivir|no aguanto más)/i;
 
 export async function POST(req: Request) {
