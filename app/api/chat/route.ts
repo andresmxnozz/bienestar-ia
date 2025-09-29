@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import systemPrompt from "@/biblioteca/systemPrompts"; // ← esta es la clave
+import systemPrompt from "../../../biblioteca/systemPrompts"; // ← ruta relativa segura
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const openai = await client.chat.completions.create({
+    const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
@@ -32,9 +32,9 @@ export async function POST(req: Request) {
       max_tokens: 500,
     });
 
-    const content =
-      openai.choices?.[0]?.message?.content ||
-      "Ahora mismo no puedo responder. ¿Puedes intentarlo otra vez?";
+    const content = resp.choices?.[0]?.message?.content
+      ?? "Ahora mismo no puedo responder. ¿Puedes intentarlo otra vez?";
+
     return NextResponse.json({ content });
   } catch (e) {
     return NextResponse.json(
