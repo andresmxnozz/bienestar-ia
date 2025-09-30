@@ -1,0 +1,38 @@
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
+import systemPrompt from "../../../biblioteca/systemPrompts"; // 🔑 IMPORTACIÓN CORRECTA
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export async function POST(req: Request) {
+  try {
+    const data = await req.json();
+
+    // Construir el historial de mensajes
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...(data?.messages || []),
+    ];
+
+    // Llamada a OpenAI Chat
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages,
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    // Responder al frontend
+    return NextResponse.json({
+      reply: completion.choices[0].message,
+    });
+  } catch (error: any) {
+    console.error("Error en la API:", error);
+    return NextResponse.json(
+      { error: "Error al procesar la solicitud" },
+      { status: 500 }
+    );
+  }
+}
